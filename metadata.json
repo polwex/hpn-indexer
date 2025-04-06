@@ -1,0 +1,18 @@
+{
+  "name": "hpn-indexer",
+  "description": "Indexer for the Hyperware Provider Network",
+  "image": "",
+  "properties": {
+    "package_name": "hpn",
+    "current_version": "0.1.0",
+    "publisher": "sortugdev.os",
+    "mirrors": [],
+    "code_hashes": {
+      "0.1.0": ""
+    },
+    "wit_version": 1,
+    "dependencies": []
+  },
+  "external_url": "",
+  "animation_url": ""
+}

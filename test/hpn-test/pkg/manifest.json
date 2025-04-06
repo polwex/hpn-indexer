@@ -1,0 +1,15 @@
+[
+    {
+        "process_name": "hpn-test",
+        "process_wasm_path": "/hpn-test.wasm",
+        "on_exit": "Restart",
+        "request_networking": false,
+        "request_capabilities": [
+            "hpn:hpn:template.os"
+        ],
+        "grant_capabilities": [
+            "hpn:hpn:template.os"
+        ],
+        "public": true
+    }
+]

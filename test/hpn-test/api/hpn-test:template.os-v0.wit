@@ -1,0 +1,5 @@
+world hpn-test-template-dot-os-v0 {
+    import hpn;
+    import tester;
+    include process-v1;
+}
