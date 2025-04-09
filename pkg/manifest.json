@@ -9,6 +9,7 @@
       "vfs:distro:sys",
       "sqlite:distro:sys",
       "timer:distro:sys",
+      "homepage:homepage:sys",
       "eth:distro:sys"
     ],
     "grant_capabilities": [

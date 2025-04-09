@@ -22,7 +22,10 @@ fn init_http() -> anyhow::Result<HttpServer> {
     http_server.bind_http_path("/api/all", http_config.clone())?;
     http_server.bind_http_path("/api/cat", http_config.clone())?;
     http_server.bind_http_path("/api/search", http_config.clone())?;
-    http_server.bind_http_path("/mcp", http_config.clone())?;
+    http_server.bind_http_path(
+        "/api/mcp",
+        HttpBindingConfig::new(false, false, false, None),
+    )?;
     add_to_homepage("HPN indexer", None, Some("/"), None);
     http_server.serve_ui("ui", vec!["/"], http_config)?;
 
@@ -43,8 +46,9 @@ fn init(our: Address) {
 
     let mut pending = chain::start_fetch(&mut state, &db);
     loop {
-        if let Err(_e) = main(&our, &mut state, &db, &mut pending) {
-            print_to_terminal(1, "fatal error {e}");
+        if let Err(e) = main(&our, &mut state, &db, &mut pending) {
+            // print_to_terminal(1, "fatal error {e}");
+            kiprintln!("something wrong at main\n{:#?}", e);
             break;
         }
     }
@@ -77,7 +81,7 @@ fn handle_request(
 ) -> anyhow::Result<()> {
     let process = source.process.to_string();
     let pkg = source.package_id().to_string();
-    kiprintln!("process: {}\n{}", pkg, process);
+    // kiprintln!("process: {}\n{}", pkg, process);
     if pkg.as_str() == "terminal:sys" {
         handle_terminal_debug(&body, state)?;
     } else if process.as_str() == "http-server:distro:sys" {
@@ -89,7 +93,7 @@ fn handle_request(
 
 fn handle_terminal_debug(body: &[u8], state: &mut State) -> anyhow::Result<()> {
     let bod = String::from_utf8(body.to_vec())?;
-    kiprintln!("terminal command: {}", bod);
+    // kiprintln!("terminal command: {}", bod);
     let command = bod.as_str();
     match command {
         "state" => {

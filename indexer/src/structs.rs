@@ -29,6 +29,10 @@ pub const DELAY_MS: u64 = 5_000; // 5s
 pub const CHECKPOINT_MS: u64 = 300_000; // 5 minutes
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum HttpPostRequest {
+    SearchRegistry(String),
+}
+#[derive(Clone, Debug, Deserialize, Serialize)]
 enum DataKey {
     /// facts are immutable
     Fact(eth::Bytes),
