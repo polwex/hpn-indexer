@@ -14,6 +14,7 @@ use crate::helpers::make_json_timestamp;
 
 pub fn open_db(our: &Address) -> Result<sqlite::Sqlite, Error> {
     let p = our.package_id();
+    // TEMP to start from scratch
     // let rmv = sqlite::remove_db(p.clone(), "hpn-explorer", None);
     let db = sqlite::open(p, "hpn-explorer", None);
     db
@@ -62,6 +63,10 @@ pub fn write_db_schema(db: &Sqlite) -> anyhow::Result<()> {
           provider_name TEXT,
           site TEXT,
           description TEXT,
+          provider_id TEXT,
+          wallet TEXT,
+          price TEXT,
+          instructions TEXT,
           category TEXT NOT NULL,
           created INTEGER,
           FOREIGN KEY (category) REFERENCES categories(name)

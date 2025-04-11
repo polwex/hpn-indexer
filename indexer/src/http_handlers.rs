@@ -1,10 +1,11 @@
 use std::collections::HashMap;
+use std::str::FromStr;
 
 use crate::{db as dbm, structs::*};
 use hyperware_process_lib::http::server::{send_response, HttpServerRequest};
 use hyperware_process_lib::http::{Method, StatusCode};
 use hyperware_process_lib::sqlite::Sqlite;
-use hyperware_process_lib::{kiprintln, last_blob, Address};
+use hyperware_process_lib::{kiprintln, last_blob, Address, Request};
 use serde_json::json;
 
 pub fn handle_frontend(
@@ -96,14 +97,34 @@ fn handle_get(
 
 fn handle_mcp(db: &Sqlite, req: HttpPostRequest) -> anyhow::Result<()> {
     kiprintln!("mcp request\n{:#?}", req);
-    let res_body = match req {
+    match req {
         HttpPostRequest::SearchRegistry(query) => {
             let data = dbm::search_provider(db, query)?;
-            data
+            send_json_response(StatusCode::OK, &json!(data))?;
+        }
+        HttpPostRequest::CallProvider {
+            provider_id,
+            provider_name,
+            arguments,
+        } => {
+            let jsonbody = json!({"provider_name": provider_name, "arguments": arguments});
+            let process = ("catpics", "catpics", "sortugdev.os");
+            let target = Address::new(provider_id, process);
+            let res = Request::new()
+                .target(target)
+                .body(serde_json::to_vec(&jsonbody)?)
+                .send_and_await_response(600)??;
+            let resbody = res.body().to_vec();
+            send_response(
+                StatusCode::OK,
+                Some(HashMap::from([(
+                    String::from("Content-Type"),
+                    String::from("application/json"),
+                )])),
+                resbody,
+            );
         }
     };
-    kiprintln!("mcp response\n{:#?}", res_body);
-    send_json_response(StatusCode::OK, &json!(res_body))?;
     Ok(())
 }
 

@@ -33,6 +33,10 @@ pub fn make_filters(state: &State) -> (eth::Filter, eth::Filter) {
             keccak256("~site"),
             keccak256("~description"),
             keccak256("~provider-name"),
+            keccak256("~provider-id"),
+            keccak256("~instructions"),
+            keccak256("~wallet"),
+            keccak256("~price"),
         ]);
     (mint_filter, notes_filter)
 }

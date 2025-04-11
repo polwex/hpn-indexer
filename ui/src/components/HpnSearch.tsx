@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { fetchAll, fetchCategory, searchDB } from "../logic/calls";
-import { AllProviders, Provider } from "../logic/types";
+import { AllProviders, Provider, ProviderJson } from "../logic/types";
 
 const Main: React.FC = () => {
   const [loading, setLoading] = useState(false);
-  const [searchResults, setSearchResults] = useState<Provider[]>([]);
+  const [searchResults, setSearchResults] = useState<ProviderJson[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [input, setInput] = useState("");
   // const [data, setData] = useState<AllProviders>({});
@@ -93,14 +93,16 @@ const Main: React.FC = () => {
 
 export default Main;
 // TODO we might want to allow icons or images for the providers and more cosmetic stuff
-function SearchResults({ results }: { results: Provider[] }) {
+function SearchResults({ results }: { results: ProviderJson[] }) {
   return (
     <div>
       {results.map((r) => (
         <div className="search-result" key={r.name}>
           <h3>{r.name}</h3>
-          <p>Provider name: {r.providerName}</p>
+          <p>Provider Node: {r.provider_id}</p>
+          <p>Provider name: {r.provider_name}</p>
           <p>Description: {r.description}</p>
+          <p>Price: {r.price}</p>
           <p>Category: {r.category}</p>
 
           <a href={r.site}>Go to site</a>

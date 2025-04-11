@@ -9,6 +9,8 @@ export type Provider = {
   description: string;
   name: string;
   providerName: string;
+  providerId: string;
+  price: string;
   // db data
   created?: number;
   id?: number;
@@ -19,6 +21,8 @@ export type ProviderJson = {
   description: string;
   name: string;
   provider_name: string;
+  provider_id: string;
+  price: string;
   // db data
   created?: number;
   id?: number;

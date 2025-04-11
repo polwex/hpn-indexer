@@ -43,6 +43,8 @@ function parseFromState(j: any): AllProviders {
       p.facts["~provider-name"],
       p.facts["~description"],
       p.facts["~site"],
+      p.facts["~provider-id"],
+      p.facts["~price"],
     );
     if ("error" in provider) continue;
     cat.push(provider.ok);
@@ -60,7 +62,7 @@ export async function fetchCategory(cat: string): AsyncRes<Provider[]> {
     return { error: `${e}` };
   }
 }
-export async function searchDB(query: string): AsyncRes<Provider[]> {
+export async function searchDB(query: string): AsyncRes<ProviderJson[]> {
   try {
     const response = await fetch(API_PATH + "/search?q=" + query);
     const j = await response.json();
@@ -79,6 +81,8 @@ function parseSqlite(ps: ProviderJson[]): Provider[] {
       p.provider_name,
       p.description,
       p.site,
+      p.provider_id,
+      p.price,
     );
     if ("error" in provider) continue;
     data.push(provider.ok);
@@ -88,24 +92,38 @@ function parseSqlite(ps: ProviderJson[]): Provider[] {
 function decodeProvider(
   category: string,
   name: string,
-  n: string,
-  d: string,
-  s: string,
+  providerName_hex: string,
+  description_hex: string,
+  site_hex: string,
+  providerId_hex: string,
+  price_hex: string,
 ): Result<Provider> {
-  console.log({ category, name, n, d, s });
-  if (!n || !d || !s) return { error: "no data" };
-  const namer = decodeDatakey(n);
+  if (
+    !providerName_hex ||
+    !description_hex ||
+    !site_hex ||
+    !providerId_hex ||
+    !price_hex
+  )
+    return { error: "no data" };
+  const namer = decodeDatakey(providerName_hex);
   if ("error" in namer) return { error: "decoding error" };
-  const descriptionr = decodeDatakey(d);
+  const descriptionr = decodeDatakey(description_hex);
   if ("error" in descriptionr) return { error: "decoding error" };
-  const siter = decodeDatakey(s);
+  const siter = decodeDatakey(site_hex);
   if ("error" in siter) return { error: "decoding error" };
+  const idr = decodeDatakey(providerId_hex);
+  if ("error" in idr) return { error: "decoding error" };
+  const pricer = decodeDatakey(price_hex);
+  if ("error" in pricer) return { error: "decoding error" };
   const provider: Provider = {
     category,
     name,
     providerName: namer.ok,
     description: descriptionr.ok,
     site: siter.ok,
+    providerId: idr.ok,
+    price: pricer.ok,
   };
 
   return { ok: provider };

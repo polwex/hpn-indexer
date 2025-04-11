@@ -1,5 +1,6 @@
 use hyperware_process_lib::{eth, get_state, hypermap, println, set_state};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 type Namehash = String;
 use std::{
     collections::HashMap,
@@ -28,9 +29,16 @@ const HYPERMAP_FIRST_BLOCK: u64 = hypermap::HYPERMAP_FIRST_BLOCK; // base
 pub const DELAY_MS: u64 = 5_000; // 5s
 pub const CHECKPOINT_MS: u64 = 300_000; // 5 minutes
 
+// calls from the MCP shim
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum HttpPostRequest {
     SearchRegistry(String),
+    #[serde(rename_all = "camelCase")]
+    CallProvider {
+        provider_id: String,
+        provider_name: String,
+        arguments: HashMap<String, Value>,
+    },
 }
 #[derive(Clone, Debug, Deserialize, Serialize)]
 enum DataKey {
@@ -101,6 +109,7 @@ impl State {
                 }
             },
         }
+        // TEMP to start from scratch
         // Self::new()
     }
 
