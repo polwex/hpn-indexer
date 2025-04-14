@@ -5,7 +5,7 @@ use hyperware_process_lib::http::server::{send_response, HttpServerRequest};
 use hyperware_process_lib::http::{Method, StatusCode};
 use hyperware_process_lib::logging::info;
 use hyperware_process_lib::sqlite::Sqlite;
-use hyperware_process_lib::{kiprintln, last_blob, Address, Request};
+use hyperware_process_lib::{last_blob, Address, Request};
 use serde_json::json;
 
 pub fn handle_frontend(
@@ -19,14 +19,13 @@ pub fn handle_frontend(
         HttpServerRequest::Http(req) => {
             let prefix = format!("{}:{}/api", our.process(), our.package_id());
             let path = req.bound_path(Some(&prefix));
-            kiprintln!("request path: {}", path);
             let met = req.method()?;
             match met {
                 Method::GET => {
                     match handle_get(our, path, req.query_params(), state, db) {
                         Ok(_) => (),
                         Err(e) => {
-                            kiprintln!("error handling get request\n{:#?}", e);
+                            // info!("error handling get request\n{:#?}", e);
                             send_response(StatusCode::INTERNAL_SERVER_ERROR, None, vec![]);
                         }
                     };
@@ -34,7 +33,7 @@ pub fn handle_frontend(
                 Method::POST => match handle_post(db) {
                     Ok(_) => (),
                     Err(e) => {
-                        kiprintln!("error handling post request\n{:#?}", e);
+                        // info!("error handling post request\n{:#?}", e);
                         send_response(StatusCode::SERVICE_UNAVAILABLE, None, vec![]);
                     }
                 },
@@ -50,7 +49,6 @@ pub fn handle_frontend(
 fn handle_post(db: &Sqlite) -> anyhow::Result<()> {
     let blob = last_blob().ok_or(anyhow::anyhow!("no blob"))?;
     // let json = std::str::from_utf8(blob.bytes());
-    // kiprintln!("json\n:{:#?}", json);
     let body = serde_json::from_slice::<HttpPostRequest>(blob.bytes())?;
     handle_mcp(db, body)?;
     Ok(())

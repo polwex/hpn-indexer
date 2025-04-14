@@ -117,6 +117,10 @@ pub fn handle_log(
 
             let parent_hash = decoded.parenthash.to_string();
             let note_label = String::from_utf8(decoded.label.to_vec())?;
+            //     info!(
+            //         "adding note\n{}\n{}\n{:#?}\n{:#?}",
+            //         note_label, parent_hash, log, decoded.data
+            //     );
 
             add_note(state, db, &parent_hash, note_label, decoded.data)
         }
@@ -131,6 +135,7 @@ pub fn handle_log(
     };
 
     if let Some(block_number) = log.block_number {
+        print_to_terminal(2, &format!("new block: {}", block_number));
         state.last_checkpoint_block = block_number;
     }
 
@@ -235,38 +240,24 @@ pub fn handle_eth_message(
     pending: &mut PendingLogs,
     body: &[u8],
 ) -> anyhow::Result<()> {
+    info!("handling eth message");
     match serde_json::from_slice::<eth::EthSubResult>(body) {
         Ok(Ok(eth::EthSub { result, .. })) => {
             if let Ok(eth::SubscriptionResult::Log(log)) =
                 serde_json::from_value::<eth::SubscriptionResult>(result)
             {
                 if let Err(e) = handle_log(state, db, pending, &log, 0) {
-                    print_to_terminal(1, &format!(" log-handling error! {e:?}"));
+                    print_to_terminal(2, &format!(" log-handling error! {e:?}"));
                 }
             }
         }
         Ok(Err(e)) => {
-            println!("got eth subscription error ({e:?}), resubscribing");
-            let address = state.hypermap.address().to_owned();
+            info!("got eth subscription error ({e:?}), resubscribing");
+            let (mint_filter, note_filter) = make_filters(state);
             if e.id == 1 {
-                let filter = eth::Filter::new()
-                    .address(address)
-                    .from_block(state.last_checkpoint_block)
-                    .to_block(eth::BlockNumberOrTag::Latest)
-                    .event(hypermap::contract::Mint::SIGNATURE);
-                state.hypermap.provider.subscribe_loop(1, filter, 2, 0);
+                state.hypermap.provider.subscribe_loop(1, mint_filter, 2, 0);
             } else if e.id == 2 {
-                let filter = eth::Filter::new()
-                    .address(address)
-                    .from_block(state.last_checkpoint_block)
-                    .to_block(eth::BlockNumberOrTag::Latest)
-                    .event(hypermap::contract::Note::SIGNATURE)
-                    .topic3(vec![
-                        keccak256("~site"),
-                        keccak256("~description"),
-                        keccak256("~provider-name"),
-                    ]);
-                state.hypermap.provider.subscribe_loop(2, filter, 2, 0);
+                state.hypermap.provider.subscribe_loop(2, note_filter, 2, 0);
             }
         }
         _ => {}
@@ -280,6 +271,7 @@ pub fn handle_timer(
     pending: &mut PendingLogs,
     is_checkpoint: bool,
 ) -> anyhow::Result<()> {
+    info!("handling timer - pending: {:?}", pending.len());
     let block_number = state.hypermap.provider.get_block_number();
     if let Ok(block_number) = block_number {
         print_to_terminal(2, &format!("new block: {}", block_number));
@@ -289,10 +281,39 @@ pub fn handle_timer(
             timer::set_timer(CHECKPOINT_MS, Some(b"checkpoint".to_vec()));
         }
     }
-    handle_pending(state, db, pending);
+    let (mint_filter, note_filter) = make_filters(state);
+    fetch_and_process_logs(state, db, pending, &mint_filter);
+    fetch_and_process_logs(state, db, pending, &note_filter);
 
-    if !pending.is_empty() {
-        timer::set_timer(DELAY_MS, None);
-    }
+    handle_pending(state, db, pending);
+    info!("new pending: {:?}", pending.len());
+
+    // if !pending.is_empty() {
+    timer::set_timer(DELAY_MS, None);
+    // }
     Ok(())
 }
+// pub fn handle_timer(
+//     state: &mut State,
+//     db: &Sqlite,
+//     pending: &mut PendingLogs,
+//     is_checkpoint: bool,
+// ) -> anyhow::Result<()> {
+//     info!("handling timer - pending: {:?}", pending.len());
+//     let block_number = state.hypermap.provider.get_block_number();
+//     if let Ok(block_number) = block_number {
+//         print_to_terminal(2, &format!("new block: {}", block_number));
+//         state.last_checkpoint_block = block_number;
+//         if is_checkpoint {
+//             state.save();
+//             timer::set_timer(CHECKPOINT_MS, Some(b"checkpoint".to_vec()));
+//         }
+//     }
+//     handle_pending(state, db, pending);
+//     info!("new pending: {:?}", pending.len());
+
+//     // if !pending.is_empty() {
+//     timer::set_timer(DELAY_MS, None);
+//     // }
+//     Ok(())
+// }

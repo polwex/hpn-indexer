@@ -117,7 +117,6 @@ pub fn insert_provider(
     child_hash: String,
     name: String,
 ) -> Result<(), Error> {
-    // kiprintln!("inserting provider\n{:#?}", provider);
     let category = get_category(db, parent_hash.to_string())?;
     let category = category.get(0).ok_or(anyhow!("no category"))?;
     let category = category.get("name").ok_or(anyhow!("no category name"))?;
@@ -142,6 +141,7 @@ pub fn insert_provider_facts(
     value: String,
     hash: String,
 ) -> Result<(), Error> {
+    info!("updating\n{}\n{}", key, value);
     let s1 = format!(
         r#"
         UPDATE providers SET

@@ -82,7 +82,6 @@ fn handle_request(
 ) -> anyhow::Result<()> {
     let process = source.process.to_string();
     let pkg = source.package_id().to_string();
-    // kiprintln!("process: {}\n{}", pkg, process);
     if pkg.as_str() == "terminal:sys" {
         handle_terminal_debug(our, &body, state, db, pending)?;
     } else if process.as_str() == "http-server:distro:sys" {
@@ -100,7 +99,6 @@ fn handle_terminal_debug(
     pending: &mut PendingLogs,
 ) -> anyhow::Result<()> {
     let bod = String::from_utf8(body.to_vec())?;
-    // kiprintln!("terminal command: {}", bod);
     let command = bod.as_str();
     match command {
         "state" => {
@@ -138,6 +136,7 @@ fn handle_response(
     pending: &mut PendingLogs,
 ) -> anyhow::Result<()> {
     let process = source.process.to_string();
+    info!("received response from {}", process);
     match process.as_str() {
         "timer:distro:sys" => {
             let is_checkpoint = context == Some(b"checkpoint".to_vec());
