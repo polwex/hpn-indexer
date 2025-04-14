@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Error, Result};
 // use hex::ToHex;
 use hyperware_process_lib::{
-    kiprintln,
+    logging::info,
     sqlite::{self, Sqlite},
     Address,
 };
@@ -15,12 +15,26 @@ use crate::helpers::make_json_timestamp;
 pub fn open_db(our: &Address) -> Result<sqlite::Sqlite, Error> {
     let p = our.package_id();
     // TEMP to start from scratch
-    // let rmv = sqlite::remove_db(p.clone(), "hpn-explorer", None);
+    // wipe_db(our)?;
     let db = sqlite::open(p, "hpn-explorer", None);
     db
 }
+pub fn wipe_db(our: &Address) -> anyhow::Result<()> {
+    let p = our.package_id();
+    // TEMP to start from scratch
+    sqlite::remove_db(p.clone(), "hpn-explorer", None)?;
+    Ok(())
+}
 
-pub fn check_schema(db: &Sqlite) -> anyhow::Result<()> {
+pub fn load_db(our: &Address) -> anyhow::Result<sqlite::Sqlite> {
+    let db = open_db(our)?;
+    let good = check_schema(&db);
+    if !good {
+        write_db_schema(&db)?;
+    }
+    Ok(db)
+}
+pub fn check_schema(db: &Sqlite) -> bool {
     let required = ["providers"];
     let mut found = required
         .iter()
@@ -28,27 +42,28 @@ pub fn check_schema(db: &Sqlite) -> anyhow::Result<()> {
         .collect::<std::collections::HashMap<_, _>>();
 
     let statement = "SELECT name from sqlite_master WHERE type='table';".to_string();
-    let data = db.read(statement, vec![])?;
-    kiprintln!("sqlite read {:?}", data);
-    let values: Vec<Value> = data
-        .iter()
-        .filter_map(|map| map.get("name"))
-        .cloned()
-        .collect();
+    let data = db.read(statement, vec![]);
+    match data {
+        Err(_) => false,
+        Ok(data) => {
+            info!("sqlite read {:?}", data);
+            let values: Vec<Value> = data
+                .iter()
+                .filter_map(|map| map.get("name"))
+                .cloned()
+                .collect();
 
-    kiprintln!("sql tables:{:?}", values);
-    for val in values {
-        if let Value::String(s) = val {
-            if let Some(entry) = found.get_mut(s.as_str()) {
-                *entry = true;
+            info!("sql tables:{:?}", values);
+            for val in values {
+                if let Value::String(s) = val {
+                    if let Some(entry) = found.get_mut(s.as_str()) {
+                        *entry = true;
+                    }
+                }
             }
+            let good = found.values().all(|&b| b);
+            good
         }
-    }
-    let good = found.values().all(|&b| b);
-    if good {
-        return Ok(());
-    } else {
-        return write_db_schema(db);
     }
 }
 

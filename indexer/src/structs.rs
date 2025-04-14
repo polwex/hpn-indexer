@@ -109,8 +109,6 @@ impl State {
                 }
             },
         }
-        // TEMP to start from scratch
-        // Self::new()
     }
 
     /// Reset by removing the checkpoint and reloading fresh state

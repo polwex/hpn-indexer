@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use alloy_sol_types::SolEvent;
 use hyperware_process_lib::eth::Filter;
+use hyperware_process_lib::logging::info;
 use hyperware_process_lib::sqlite::Sqlite;
 use hyperware_process_lib::{eth, hypermap, print_to_terminal, println, timer};
 
@@ -150,7 +151,7 @@ pub fn add_mint(
     child_hash: String,
     name: String,
 ) -> anyhow::Result<()> {
-    // kiprintln!("adding mint\n{}\n{}\n{}", name, parent_hash, child_hash);
+    // info!("adding mint\n{}\n{}\n{}", name, parent_hash, child_hash);
     if name == "hpn-testing-beta" {
         state.root_hash = Some(child_hash);
         // 0xdeeac81ae11b64e7cab86d089c306e5d223552a630f02633ce170d2786ff1bbd
@@ -177,7 +178,7 @@ pub fn add_mint(
         return Ok(());
     };
 
-    // kiprintln!(
+    // info!(
     //     "failed processing mint \n{:#?}\n{}\n{}",
     //     name,
     //     parent_hash,
@@ -192,7 +193,7 @@ pub fn add_note(
     note_label: String,
     data: eth::Bytes,
 ) -> anyhow::Result<()> {
-    // kiprintln!("adding note\n{}\n{}", note_label, parent_hash);
+    // info!("adding note\n{}\n{}", note_label, parent_hash);
     // remove the ~
     let key = note_label
         .chars()
@@ -200,6 +201,7 @@ pub fn add_note(
         .collect::<String>()
         .replace("-", "_");
     let decoded = decode_datakey(&data.to_string())?;
+    info!("adding note\nkey: {} - value:{}", key, decoded);
     dbm::insert_provider_facts(db, key, decoded.clone(), parent_hash.to_string())?;
     if let Some(provider) = state.providers.get_mut(parent_hash) {
         let facts = provider.facts.get_mut(&note_label);

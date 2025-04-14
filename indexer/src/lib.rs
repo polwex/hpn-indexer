@@ -1,10 +1,9 @@
+use chrono::TimeZone;
 use hyperware_process_lib::homepage::add_to_homepage;
 use hyperware_process_lib::http::server::{HttpBindingConfig, HttpServer};
 use hyperware_process_lib::logging::{info, init_logging, Level};
 use hyperware_process_lib::sqlite::Sqlite;
-use hyperware_process_lib::{
-    await_message, call_init, kiprintln, print_to_terminal, Address, Message,
-};
+use hyperware_process_lib::{await_message, call_init, Address, Message};
 
 mod db;
 mod structs;
@@ -41,14 +40,13 @@ fn init(our: Address) {
 
     let mut state = State::load();
     let _http_server = init_http().expect("failed to bind paths");
-    let db = db::open_db(&our).unwrap();
-    db::check_schema(&db).unwrap();
+    let db = db::load_db(&our).unwrap();
 
     let mut pending = chain::start_fetch(&mut state, &db);
     loop {
         if let Err(e) = main(&our, &mut state, &db, &mut pending) {
             // print_to_terminal(1, "fatal error {e}");
-            kiprintln!("something wrong at main\n{:#?}", e);
+            info!("something wrong at main\n{:#?}", e);
             break;
         }
     }
@@ -62,7 +60,9 @@ fn main(
 ) -> anyhow::Result<()> {
     let message = await_message()?;
     match message {
-        Message::Request { source, body, .. } => handle_request(our, &source, body, state, db),
+        Message::Request { source, body, .. } => {
+            handle_request(our, &source, body, state, db, pending)
+        }
         Message::Response {
             source,
             body,
@@ -78,12 +78,13 @@ fn handle_request(
     body: Vec<u8>,
     state: &mut State,
     db: &Sqlite,
+    pending: &mut PendingLogs,
 ) -> anyhow::Result<()> {
     let process = source.process.to_string();
     let pkg = source.package_id().to_string();
     // kiprintln!("process: {}\n{}", pkg, process);
     if pkg.as_str() == "terminal:sys" {
-        handle_terminal_debug(&body, state)?;
+        handle_terminal_debug(our, &body, state, db, pending)?;
     } else if process.as_str() == "http-server:distro:sys" {
         http_handlers::handle_frontend(our, &body, state, db)?;
     };
@@ -91,17 +92,37 @@ fn handle_request(
     Ok(())
 }
 
-fn handle_terminal_debug(body: &[u8], state: &mut State) -> anyhow::Result<()> {
+fn handle_terminal_debug(
+    our: &Address,
+    body: &[u8],
+    state: &mut State,
+    db: &Sqlite,
+    pending: &mut PendingLogs,
+) -> anyhow::Result<()> {
     let bod = String::from_utf8(body.to_vec())?;
     // kiprintln!("terminal command: {}", bod);
     let command = bod.as_str();
     match command {
         "state" => {
-            kiprintln!("hpn state\n{:#?}", state);
+            info!("hpn state\n{:#?}", state);
+            info!("block: {:#?}", state.last_checkpoint_block);
+            let datetime = chrono::Utc.timestamp_opt(state.logging_started as i64, 0);
+            info!("started: {:#?}", datetime);
+        }
+        "db" => {
+            let db_up = db::check_schema(db);
+            info!("hpn db\n{:#?}", db_up);
         }
         "reset" => {
-            kiprintln!("resetting");
-            state.reset();
+            info!("block: {:#?}", state.last_checkpoint_block);
+            let nstate = State::new();
+            *state = nstate;
+            info!("block: {:#?}", state.last_checkpoint_block);
+            info!("resetting db");
+            db::wipe_db(our)?;
+            db::load_db(our)?;
+            let npending = chain::start_fetch(state, db);
+            *pending = npending;
         }
         _ => (),
     }

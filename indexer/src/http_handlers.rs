@@ -1,9 +1,9 @@
 use std::collections::HashMap;
-use std::str::FromStr;
 
 use crate::{db as dbm, structs::*};
 use hyperware_process_lib::http::server::{send_response, HttpServerRequest};
 use hyperware_process_lib::http::{Method, StatusCode};
+use hyperware_process_lib::logging::info;
 use hyperware_process_lib::sqlite::Sqlite;
 use hyperware_process_lib::{kiprintln, last_blob, Address, Request};
 use serde_json::json;
@@ -56,7 +56,7 @@ fn handle_post(db: &Sqlite) -> anyhow::Result<()> {
     Ok(())
 }
 fn handle_get(
-    our: &Address,
+    _our: &Address,
     path: &str,
     params: &HashMap<String, String>,
     state: &mut State,
@@ -96,7 +96,7 @@ fn handle_get(
 }
 
 fn handle_mcp(db: &Sqlite, req: HttpPostRequest) -> anyhow::Result<()> {
-    kiprintln!("mcp request\n{:#?}", req);
+    info!("mcp request\n{:#?}", req);
     match req {
         HttpPostRequest::SearchRegistry(query) => {
             let data = dbm::search_provider(db, query)?;
@@ -107,13 +107,14 @@ fn handle_mcp(db: &Sqlite, req: HttpPostRequest) -> anyhow::Result<()> {
             provider_name,
             arguments,
         } => {
-            let jsonbody = json!({"provider_name": provider_name, "arguments": arguments});
-            let process = ("catpics", "catpics", "sortugdev.os");
+            let jsonbody = json!({"MCP": {"provider_name": provider_name, "arguments": arguments}});
+            info!("{:#?}", jsonbody);
+            let process = ("provider", "hpn", "sortugdev.os");
             let target = Address::new(provider_id, process);
             let res = Request::new()
                 .target(target)
                 .body(serde_json::to_vec(&jsonbody)?)
-                .send_and_await_response(600)??;
+                .send_and_await_response(60)??;
             let resbody = res.body().to_vec();
             send_response(
                 StatusCode::OK,
