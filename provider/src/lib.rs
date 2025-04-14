@@ -40,10 +40,11 @@ struct MCPRequest {
     provider_name: String,
     arguments: HashMap<String, Value>,
 }
-const WEATHER_API_KEY: &str = "";
-const FINNHUB_API_KEY: &str = "";
-const DUNE_API_KEY: &str = "";
+const WEATHER_API_KEY: &str = "1ef55da5e2844b1995b115659251104";
+const FINNHUB_API_KEY: &str = "cvsfqupr01qhup0qhvr0cvsfqupr01qhup0qhvrg";
+const DUNE_API_KEY: &str = "fi0V4dqNdMhKQorm1rhJ9XIZ84gDpkWW";
 fn call_json_api(url: &str) -> anyhow::Result<Vec<u8>> {
+    kiprintln!("calling {}", url);
     let mut headers = HashMap::new();
     headers.insert("Content-type".to_string(), "application/json".to_string());
     let url = Url::parse(&url)?;
@@ -128,12 +129,15 @@ fn handle_mcp_request(
                 .ok_or(anyhow::anyhow!("bad arguments sent"))?
                 .as_str()
                 .ok_or(anyhow::anyhow!("bad arguments sent"))?;
-            let chain_id = req
+            let chain_idv = req
                 .arguments
                 .get("chainId")
-                .ok_or(anyhow::anyhow!("bad arguments sent"))?
-                .as_str()
                 .ok_or(anyhow::anyhow!("bad arguments sent"))?;
+            let chain_id = match chain_idv {
+                Value::Number(n) => n.to_string(),
+                Value::String(s) => s.to_string(),
+                _ => return Err(anyhow::anyhow!("bad arguments sent")),
+            };
             let url = format!(
                 "https://api.dune.com/api/echo/beta/tokens/evm/{}?chain_ids={}",
                 contract, chain_id
