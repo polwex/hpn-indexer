@@ -40,6 +40,9 @@ struct MCPRequest {
     provider_name: String,
     arguments: HashMap<String, Value>,
 }
+const WEATHER_API_KEY: &str = "";
+const FINNHUB_API_KEY: &str = "";
+const DUNE_API_KEY: &str = "";
 fn call_json_api(url: &str) -> anyhow::Result<Vec<u8>> {
     let mut headers = HashMap::new();
     headers.insert("Content-type".to_string(), "application/json".to_string());
@@ -89,7 +92,6 @@ fn handle_mcp_request(
     kiprintln!("{:#?}", req);
     match req.provider_name.as_str() {
         "WeatherAPI.com" => {
-            let api_key = std::env::var("WEATHER_API_KEY")?;
             let query_value = req
                 .arguments
                 .get("query")
@@ -99,13 +101,12 @@ fn handle_mcp_request(
                 .ok_or(anyhow::anyhow!("bad query argument sent"))?;
             let url = format!(
                 "https://api.weatherapi.com/v1/current.json?key={}&q={}",
-                api_key, query
+                WEATHER_API_KEY, query
             );
             let res_body = call_json_api(&url)?;
             Response::new().body(res_body).send()?;
         }
         "Finnhub API" => {
-            let api_key = std::env::var("FINNHUB_API_KEY")?;
             let symbol_value = req
                 .arguments
                 .get("symbol")
@@ -115,7 +116,7 @@ fn handle_mcp_request(
                 .ok_or(anyhow::anyhow!("bad symbol argument sent"))?;
             let url = format!(
                 "https://finnhub.io/api/v1/quote?symbol={}&token={}",
-                symbol, api_key
+                symbol, FINNHUB_API_KEY
             );
             let res_body = call_json_api(&url)?;
             Response::new().body(res_body).send()?;
@@ -137,7 +138,12 @@ fn handle_mcp_request(
                 "https://api.dune.com/api/echo/beta/tokens/evm/{}?chain_ids={}",
                 contract, chain_id
             );
-            let res_body = call_json_api(&url)?;
+            let mut headers = HashMap::new();
+            headers.insert("Content-type".to_string(), "application/json".to_string());
+            headers.insert("X-Dune-Api-Key".to_string(), DUNE_API_KEY.to_string());
+            let url = Url::parse(&url)?;
+            let res = send_request_await_response(Method::GET, url, Some(headers), 5000, vec![])?;
+            let res_body = res.body().to_vec();
             Response::new().body(res_body).send()?;
         }
         "Catpics" => {
