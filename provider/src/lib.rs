@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use hyperware_process_lib::http::client::send_request_await_response;
 use hyperware_process_lib::http::Method;
 use hyperware_process_lib::logging::{error, info, init_logging, Level};
-use hyperware_process_lib::{await_message, call_init, Address, Message, Response};
+use hyperware_process_lib::{await_message, call_init, kiprintln, Address, Message, Response};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use url::Url;
@@ -86,9 +86,9 @@ fn handle_api_request(req: ApiKeyHandling, state: &mut State) -> anyhow::Result<
     Ok(())
 }
 fn handle_mcp_request(our: &Address, req: MCPRequest, state: &mut State) -> anyhow::Result<()> {
-    info!("{:#?}", req);
+    // kiprintln!("provider: {:#?}", req);
     match req.provider_name.as_str() {
-        "WeatherAPI.com" => {
+        "weatherapi" => {
             let api_key = state
                 .out_keys
                 .get("WEATHER_API_KEY")
@@ -190,7 +190,7 @@ fn handle_mcp_request(our: &Address, req: MCPRequest, state: &mut State) -> anyh
             info!("{:#?}", req.arguments);
             ()
         }
-        _ => (),
+        _ => return Err(anyhow::anyhow!("no such provider here")),
     };
     Ok(())
 }
@@ -210,7 +210,15 @@ fn handle_message(our: &Address, message: &Message, state: &mut State) -> anyhow
     let req = serde_json::from_slice::<ProviderRequest>(body)?;
     match req {
         ProviderRequest::API(r) => handle_api_request(r, state),
-        ProviderRequest::MCP(mcp) => handle_mcp_request(our, mcp, state),
+        ProviderRequest::MCP(mcp) => match handle_mcp_request(our, mcp, state) {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                let error_string = e.to_string();
+                let res_body = serde_json::to_vec(&json!({"error": error_string}))?;
+                Response::new().body(res_body).send()?;
+                return Err(e);
+            }
+        },
     }
 }
 

@@ -40,6 +40,15 @@ pub enum HttpPostRequest {
         arguments: HashMap<String, Value>,
     },
 }
+
+// calls from the Client
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub enum ClientRequest {
+    GetFullRegistry,
+    GetCategory(String),
+    SearchRegistry(String),
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 enum DataKey {
     /// facts are immutable

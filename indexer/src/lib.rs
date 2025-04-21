@@ -87,7 +87,11 @@ fn handle_request(
         handle_terminal_debug(our, &body, state, db, pending)?;
     } else if process.as_str() == "http-server:distro:sys" {
         http_handlers::handle_frontend(our, &body, state, db)?;
-    };
+    } else {
+        let request = serde_json::from_slice::<ClientRequest>(&body)?;
+        info!("{:#?}", request);
+        http_handlers::handle_client_request(request, db)?;
+    }
 
     Ok(())
 }

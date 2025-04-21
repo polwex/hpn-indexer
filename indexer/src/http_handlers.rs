@@ -5,7 +5,7 @@ use hyperware_process_lib::http::server::{send_response, HttpServerRequest};
 use hyperware_process_lib::http::{Method, StatusCode};
 use hyperware_process_lib::logging::info;
 use hyperware_process_lib::sqlite::Sqlite;
-use hyperware_process_lib::{kiprintln, last_blob, Address, Request};
+use hyperware_process_lib::{last_blob, Address, Request, Response};
 use serde_json::json;
 
 pub fn handle_frontend(
@@ -19,14 +19,14 @@ pub fn handle_frontend(
         HttpServerRequest::Http(req) => {
             let prefix = format!("{}:{}/api", our.process(), our.package_id());
             let path = req.bound_path(Some(&prefix));
-            kiprintln!("request path: {}", path);
+            info!("request path: {}", path);
             let met = req.method()?;
             match met {
                 Method::GET => {
                     match handle_get(our, path, req.query_params(), state, db) {
                         Ok(_) => (),
                         Err(e) => {
-                            kiprintln!("error handling get request\n{:#?}", e);
+                            info!("error handling get request\n{:#?}", e);
                             send_response(StatusCode::INTERNAL_SERVER_ERROR, None, vec![]);
                         }
                     };
@@ -34,7 +34,7 @@ pub fn handle_frontend(
                 Method::POST => match handle_post(db) {
                     Ok(_) => (),
                     Err(e) => {
-                        kiprintln!("error handling post request\n{:#?}", e);
+                        info!("error handling post request\n{:#?}", e);
                         send_response(StatusCode::SERVICE_UNAVAILABLE, None, vec![]);
                     }
                 },
@@ -128,6 +128,23 @@ fn handle_mcp(db: &Sqlite, req: HttpPostRequest) -> anyhow::Result<()> {
     };
     Ok(())
 }
+pub fn handle_client_request(req: ClientRequest, db: &Sqlite) -> anyhow::Result<()> {
+    match req {
+        ClientRequest::GetFullRegistry => {
+            let data = dbm::get_all(db)?;
+            send_hyperware_response(&json!(data))?;
+        }
+        ClientRequest::GetCategory(query) => {
+            let data = dbm::get_by_category(db, query.to_string())?;
+            send_hyperware_response(&json!(data))?;
+        }
+        ClientRequest::SearchRegistry(query) => {
+            let data = dbm::search_provider(db, query.to_string())?;
+            send_hyperware_response(&json!(data))?;
+        }
+    }
+    Ok(())
+}
 
 fn send_json_response<T: serde::Serialize>(status: StatusCode, data: &T) -> anyhow::Result<()> {
     let json_data = serde_json::to_vec(data)?;
@@ -139,5 +156,10 @@ fn send_json_response<T: serde::Serialize>(status: StatusCode, data: &T) -> anyh
         )])),
         json_data,
     );
+    Ok(())
+}
+fn send_hyperware_response<T: serde::Serialize>(data: &T) -> anyhow::Result<()> {
+    let body = serde_json::to_vec(data)?;
+    Response::new().body(body).send()?;
     Ok(())
 }

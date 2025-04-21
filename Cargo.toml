@@ -2,7 +2,7 @@
 resolver = "2"
 members = [
     "indexer",
-    "provider"
+    "provider",
 ]
 
 [profile.release]

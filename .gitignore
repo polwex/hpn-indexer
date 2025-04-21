@@ -1,3 +1,5 @@
+.env
+pics
 */target/
 /target
 pkg/*.wasm

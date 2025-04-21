@@ -4,6 +4,9 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
+// add from terminal
+// ex:
+// m our@provider:hpn:sortugdev.os 'add-key WEATHER_API_KEY 1ef55da5e2844b1995b115659251104'
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct State {
     pub out_keys: HashMap<String, String>,
